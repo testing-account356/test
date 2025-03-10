@@ -1,0 +1,32 @@
+name: remove-tag
+
+on:
+  release:
+    types: [deleted]
+  workflow_dispatch:
+  
+jobs:
+  delete-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Extract tag name
+      id: tag
+      run: |
+        if [[ "${{ github.event_name }}" == "release" ]]; then
+          echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "TAG_NAME=manual-run-no-tag" >> $GITHUB_OUTPUT
+        fi
+      
+    - name: Delete tag
+      if: ${{ github.event_name == 'release' && github.event.action == 'deleted' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Deleting tag ${{ steps.tag.outputs.TAG_NAME }}"
+        gh api \
+          --method DELETE \
+          /repos/${{ github.repository }}/git/refs/tags/${{ steps.tag.outputs.TAG_NAME }}
